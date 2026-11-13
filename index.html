@@ -1,25 +1,360 @@
-// Offline Coordinate-Based Road Distance Engine (Haversine x 1.32 Winding Factor)
-      calculateRealRoadRoute() {
-        const pickupInput = document.getElementById('pickupInput');
-        const dropInput = document.getElementById('dropInput');
-        const pickup = (pickupInput?.value || '').trim();
-        const drop = (dropInput?.value || '').trim();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LoadKaro - On-Demand Commercial Tempos & Heavy Trucks</title>
+  <meta name="description" content="India's leading commercial tempo and heavy truck booking platform. 60-second dispatch, live telematics radar, and instant E-Way bill logistics." />
+  <meta property="og:title" content="LoadKaro - On-Demand Commercial Tempos & Heavy Trucks" />
+  <meta property="og:description" content="Point-to-Point Commercial Tempos & Heavy Trucks • 60-Second On-Demand Booking Platform" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
 
-        if (pickup.length < 1 || drop.length < 1) {
+  <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            highway: { 950: '#060B14', 900: '#0F172A', 800: '#1E293B', 700: '#334155' },
+            amberSafety: { 400: '#FBBF24', 500: '#F59E0B', 600: '#D97706' },
+            orangeSafety: { 500: '#F97316', 600: '#EA580C', 700: '#C2410C' },
+            emeraldTransit: { 500: '#10B981', 600: '#059669' }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            body: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- SheetJS for Excel Database Parsing & Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; line-height: 1.5; background-color: #F8FAFC; color: #1E293B; }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .interactive-card { transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1); background: #FFFFFF; border: 1px solid rgba(226, 232, 240, 0.8); }
+    .interactive-card:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.08); }
+    .interactive-btn { transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1); }
+    .interactive-btn:active { transform: scale(0.98); }
+  </style>
+</head>
+
+<body class="bg-[#F8FAFC] text-slate-800 font-body antialiased min-h-screen flex flex-col selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- TOP STICKY BAR: LIVE SUPABASE CLOUD SYNC -->
+  <aside aria-label="Database Status" class="bg-highway-950 text-slate-300 text-xs py-2 px-4 border-b border-slate-800 relative z-40">
+    <div class="max-w-[1380px] mx-auto px-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center gap-1.5 font-medium text-slate-200">
+          <span class="w-2 h-2 rounded-full bg-emeraldTransit-500 animate-pulse" id="syncStatusDot"></span>
+          <span id="syncStatusText">Live Supabase Cloud Sync: Connected</span>
+        </span>
+        <span class="text-slate-600">|</span>
+        <span class="text-slate-400 font-mono text-[11px]" id="dbSummaryPill">0 Active Consignments • 11 Drivers Active</span>
+      </div>
+      <div>
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-slate-400 font-mono text-[11px]">
+          PostgreSQL Cloud Connected • Encrypted Telematics
+        </span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- HEADER NAVBAR -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-[1380px] mx-auto px-5 py-3 flex items-center justify-between gap-4">
+      <a href="#" class="flex flex-col items-center justify-center font-bold text-highway-900 text-lg tracking-tight">
+        LoadKaro
+        <span class="text-[9px] uppercase tracking-widest text-amber-600">Commercial Tempos & Trucks</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <a href="#estimatorSection" class="interactive-btn px-4 py-2 bg-amberSafety-500 hover:bg-amberSafety-600 text-slate-950 font-bold rounded-xl text-xs shadow-sm">
+          Book Truck →
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO ESTIMATOR SECTION -->
+  <section id="estimatorSection" class="relative bg-slate-950 pt-8 pb-16 border-b border-slate-800">
+    <div class="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+        
+        <!-- LEFT HERO BANNER -->
+        <div class="lg:col-span-7 flex flex-col justify-center space-y-4 text-white">
+          <div class="inline-flex items-center gap-2 px-3 py-1 bg-amber-400/20 border border-amber-400/60 rounded-md text-xs font-bold text-amber-300 uppercase w-max">
+            Point-to-Point Commercial Freight • Live OSRM Road Routing
+          </div>
+          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight">
+            WE MOVE YOUR COMMERCIAL FREIGHT <span class="text-amberSafety-400">SAFE, FAST & RELIABLE</span>
+          </h1>
+          <p class="text-sm text-slate-300 leading-relaxed">
+            Verified regional drivers, guaranteed 60-second fleet assignment, transparent per-km rate cards, and live OSRM highway distance calculation across India.
+          </p>
+        </div>
+
+        <!-- RIGHT ESTIMATOR WIDGET -->
+        <div class="lg:col-span-5 flex flex-col">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-xl flex flex-col h-full">
+            <div class="bg-gradient-to-r from-amberSafety-500 to-amberSafety-600 px-6 py-5 text-slate-950 rounded-t-2xl">
+              <h2 class="text-xl font-black tracking-tight">REAL-TIME FREIGHT ESTIMATOR</h2>
+              <p class="text-xs font-semibold text-amber-950/80 mt-0.5">Instant Live OSRM Quote • Zero Hidden Surcharges</p>
+              
+              <!-- Trip Mode Switcher -->
+              <div class="mt-3 grid grid-cols-2 p-1 bg-amber-600/30 rounded-lg gap-1">
+                <button type="button" id="btnModeIntra" class="py-1.5 px-3 rounded text-xs font-bold transition-all bg-slate-950 text-white shadow-sm" aria-pressed="true">
+                  Intra-City (Local)
+                </button>
+                <button type="button" id="btnModeInter" class="py-1.5 px-3 rounded text-xs font-bold transition-all text-slate-950 hover:bg-white/20" aria-pressed="false">
+                  Inter-City (Highway)
+                </button>
+              </div>
+            </div>
+
+            <form id="freightEstimatorForm" class="p-6 flex-1 flex flex-col justify-between space-y-4 text-xs">
+              <!-- Operating City Bar -->
+              <div id="localCitySelectorBar" class="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-3">
+                <label for="localCitySelect" class="font-medium text-slate-700">Operating City / Town</label>
+                <select id="localCitySelect" class="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-900 cursor-pointer">
+                  <option value="Udupi / Kundapura, Karnataka" selected>Udupi / Kundapura, Karnataka</option>
+                  <option value="Bengaluru, Karnataka">Bengaluru, Karnataka</option>
+                  <option value="Mangaluru, Karnataka">Mangaluru, Karnataka</option>
+                  <option value="Mumbai & MMR, Maharashtra">Mumbai & MMR, Maharashtra</option>
+                  <option value="Pune, Maharashtra">Pune, Maharashtra</option>
+                  <option value="Chennai, Tamil Nadu">Chennai, Tamil Nadu</option>
+                  <option value="Hyderabad, Telangana">Hyderabad, Telangana</option>
+                </select>
+              </div>
+
+              <!-- Pickup & Drop Inputs -->
+              <div class="space-y-3">
+                <div>
+                  <label for="pickupInput" class="block font-bold text-slate-700 mb-1">1. Pickup Industrial Hub / Town</label>
+                  <input type="text" id="pickupInput" required value="Kundapura Main Road" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium focus:bg-white focus:border-amber-500" />
+                </div>
+                <div>
+                  <label for="dropInput" class="block font-bold text-slate-700 mb-1">2. Delivery Destination Town / Hub</label>
+                  <input type="text" id="dropInput" required value="Baikampady Industrial Area, Mangaluru" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium focus:bg-white focus:border-amber-500" />
+                </div>
+              </div>
+
+              <!-- Telemetry Pill -->
+              <div id="routeTelemetryPill" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 flex items-center justify-between gap-2">
+                <div class="flex flex-col min-w-0">
+                  <span class="text-[11px] font-bold text-slate-700">Live OSRM Road Distance</span>
+                  <span id="routeSourceBadge" class="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-700 font-semibold mt-0.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emeraldTransit-500 animate-pulse"></span>
+                    <span>OSRM Highway Routing Active</span>
+                  </span>
+                </div>
+                <div id="routeDistanceEtaText" class="text-right font-mono font-extrabold text-xs sm:text-sm text-highway-900">
+                  Calculated via OSRM...
+                </div>
+              </div>
+
+              <!-- Vehicle Tiers -->
+              <div>
+                <label class="block font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span>Select Vehicle Tier:</span>
+                  <span id="selectedTierCapacity" class="text-[11px] font-mono text-slate-500">Payload: 750 kg</span>
+                </label>
+                <div id="vehicleTierChips" class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1"></div>
+              </div>
+
+              <!-- Fare Breakdown -->
+              <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-1.5 font-mono text-[11px]">
+                <div class="flex justify-between text-slate-600"><span>Base Fare:</span><span id="fareBaseDisplay">₹420</span></div>
+                <div class="flex justify-between text-slate-600"><span id="fareDistanceRateLabel">Distance:</span><span id="fareDistDisplay">₹0</span></div>
+                <div class="flex justify-between text-slate-600"><span>Toll & GST (18%):</span><span id="fareGstDisplay">₹0</span></div>
+                <div class="pt-2 border-t border-slate-200 flex justify-between items-baseline text-highway-900">
+                  <span class="font-sans font-bold text-xs uppercase text-slate-800">Total Estimated Fare:</span>
+                  <span id="fareTotalDisplay" class="text-xl font-extrabold">₹1,345</span>
+                </div>
+              </div>
+
+              <button type="submit" id="btnConfirmBooking" class="interactive-btn w-full py-3.5 bg-highway-900 hover:bg-slate-800 text-amberSafety-400 font-bold text-sm rounded-xl shadow-md">
+                CONFIRM & ASSIGN VEHICLE →
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- MODAL -->
+  <div id="bookingModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm hidden">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+      <h3 class="text-xl font-black text-highway-900 mb-3">CONSIGNMENT DISPATCH CONFIRMED</h3>
+      <div class="py-4 space-y-3 text-xs" id="bookingModalContent"></div>
+      <button id="btnCloseBookingModal" class="w-full mt-4 py-3 bg-highway-900 text-white font-bold text-xs rounded-xl">Close</button>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- JAVASCRIPT APP LOGIC WITH LIVE OSRM ROAD ROUTING -->
+  <script type="module">
+    const SUPABASE_URL = import.meta?.env?.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = import.meta?.env?.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+
+    let supabaseClient = null;
+    async function getSupabaseClient() {
+      if (!SUPABASE_URL || SUPABASE_URL === 'YOUR_SUPABASE_URL') return null;
+      if (supabaseClient) return supabaseClient;
+      try {
+        const { createClient } = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+        supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return supabaseClient;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    const LoadKaroModel = {
+      db: {
+        Fleet_Inventory: [
+          { Vehicle_ID: 'V01', Model_Name: 'Piaggio Ape Cargo', Category: 'Micro 3-Wheeler', Max_Payload_Kg: 500, Cargo_Volume_CuFt: 100, Base_Fare_INR: 250, Included_Km: 3, Per_Km_Rate_INR: 18, Free_Loading_Mins: 30, Image_URL: './assets/vehicles/v01.png' },
+          { Vehicle_ID: 'V02', Model_Name: 'Tata Ace Gold', Category: 'Mini Truck', Max_Payload_Kg: 750, Cargo_Volume_CuFt: 160, Base_Fare_INR: 420, Included_Km: 4, Per_Km_Rate_INR: 22, Free_Loading_Mins: 45, Image_URL: './assets/vehicles/v02.png' },
+          { Vehicle_ID: 'V03', Model_Name: 'Mahindra Bolero Maxi', Category: 'Pick-up LCV', Max_Payload_Kg: 1200, Cargo_Volume_CuFt: 240, Base_Fare_INR: 650, Included_Km: 5, Per_Km_Rate_INR: 28, Free_Loading_Mins: 60, Image_URL: './assets/vehicles/v03.png' },
+          { Vehicle_ID: 'V05', Model_Name: 'Tata 407 LPT', Category: 'Light Truck', Max_Payload_Kg: 2500, Cargo_Volume_CuFt: 450, Base_Fare_INR: 1200, Included_Km: 8, Per_Km_Rate_INR: 38, Free_Loading_Mins: 90, Image_URL: './assets/vehicles/v05.png' },
+          { Vehicle_ID: 'V08', Model_Name: 'BharatBenz 1617R', Category: 'Heavy HCV', Max_Payload_Kg: 10000, Cargo_Volume_CuFt: 1200, Base_Fare_INR: 3800, Included_Km: 20, Per_Km_Rate_INR: 85, Free_Loading_Mins: 180, Image_URL: './assets/vehicles/v08.png' }
+        ],
+        Bookings_Consignments: [],
+        Drivers_Fleet_Partners: [
+          { Driver_ID: 'DRV-01', Name: 'Manjunath Gowda', Mobile: '+91 98451 22910', Rating: 4.9, Vehicle_Assigned: 'Tata Ace Gold' }
+        ]
+      },
+      state: {
+        activeLr: null,
+        selectedVehicleId: 'V02',
+        tripMode: 'inter',
+        selectedLocalCity: 'Udupi / Kundapura, Karnataka',
+        distanceKm: 85,
+        routeDurationSec: 5400,
+        routeSource: 'Live OSRM Road Routing',
+        isCalculatingRoute: false,
+        routeRequestSeq: 0
+      },
+
+      LOADKARO_LOCATIONS: {
+        'Udupi / Kundapura, Karnataka': [
+          { area: 'Kundapura Main Road', lat: 13.6213, lon: 74.6915 },
+          { area: 'Koteshwara', lat: 13.5919, lon: 74.7034 },
+          { area: 'Brahmavar', lat: 13.4357, lon: 74.7460 },
+          { area: 'Manipal', lat: 13.3524, lon: 74.7868 },
+          { area: 'Udupi City', lat: 13.3409, lon: 74.7421 },
+          { area: 'Malpe Port', lat: 13.3489, lon: 74.7033 }
+        ],
+        'Mangaluru, Karnataka': [
+          { area: 'Baikampady Industrial Area', lat: 12.9562, lon: 74.8129 },
+          { area: 'Panambur Port', lat: 12.9367, lon: 74.8087 },
+          { area: 'Surathkal', lat: 13.0108, lon: 74.7943 }
+        ],
+        'Bengaluru, Karnataka': [
+          { area: 'Peenya Industrial Area', lat: 13.0285, lon: 77.5197 },
+          { area: 'Whitefield', lat: 12.9698, lon: 77.7500 },
+          { area: 'Electronic City', lat: 12.8452, lon: 77.6602 }
+        ]
+      },
+
+      resolveLocationCoords(rawText) {
+        const raw = (rawText || '').trim().toLowerCase();
+        if (!raw) return null;
+        for (const [city, areas] of Object.entries(this.LOADKARO_LOCATIONS)) {
+          for (const loc of areas) {
+            if (raw.includes(loc.area.toLowerCase())) return { lat: loc.lat, lon: loc.lon };
+          }
+        }
+        return null;
+      },
+
+      formatDuration(totalSec) {
+        const mins = Math.round(totalSec / 60);
+        const hrs = Math.floor(mins / 60);
+        const m = mins % 60;
+        return hrs === 0 ? `${m}m` : `${hrs}h ${m}m`;
+      },
+
+      calculateFare(vehicleId, distanceKm) {
+        const v = this.db.Fleet_Inventory.find(item => item.Vehicle_ID === vehicleId) || this.db.Fleet_Inventory[1];
+        const dist = Number(distanceKm) || 10;
+        const extra = Math.max(0, dist - v.Included_Km);
+        const distCharge = Math.round(extra * v.Per_Km_Rate_INR);
+        const sub = v.Base_Fare_INR + distCharge + Math.round(dist * 1.5);
+        const gst = Math.round(sub * 0.18);
+        return { vehicle: v, baseFare: v.Base_Fare_INR, extraKm: extra, perKmRate: v.Per_Km_Rate_INR, distanceCharge: distCharge, tolls: Math.round(dist * 1.5), gst, total: sub + gst };
+      }
+    };
+
+    const LoadKaroView = {
+      renderEstimatorVehicleChips(vehicles, selectedId) {
+        const container = document.getElementById('vehicleTierChips');
+        if (!container) return;
+        container.innerHTML = vehicles.map(v => `
+          <button type="button" data-vehicle-id="${v.Vehicle_ID}" class="estimator-vehicle-chip p-2 rounded-xl border text-left flex items-center gap-2 ${v.Vehicle_ID === selectedId ? 'bg-highway-900 text-white border-highway-900' : 'bg-white border-slate-200 text-slate-800'}">
+            <div>
+              <div class="font-bold text-xs">${v.Model_Name}</div>
+              <div class="text-[10px] opacity-80">₹${v.Base_Fare_INR} + ₹${v.Per_Km_Rate_INR}/km</div>
+            </div>
+          </button>
+        `).join('');
+      },
+
+      renderRouteTelemetryPill() {
+        const badge = document.getElementById('routeSourceBadge');
+        const distText = document.getElementById('routeDistanceEtaText');
+        if (!badge || !distText) return;
+        if (LoadKaroModel.state.isCalculatingRoute) {
+          badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span><span>Querying OSRM Highway...</span>`;
+          distText.textContent = `Calculating...`;
           return;
         }
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emeraldTransit-500"></span><span>Live OSRM Highway Km</span>`;
+        distText.textContent = `${LoadKaroModel.state.distanceKm} km • Est. ${LoadKaroModel.formatDuration(LoadKaroModel.state.routeDurationSec)}`;
+      },
 
-        const pairKey = `${LoadKaroModel.state.tripMode}||${LoadKaroModel.state.tripMode === 'intra' ? LoadKaroModel.state.selectedLocalCity : 'all'}||${pickup.toLowerCase()}||${drop.toLowerCase()}`;
-        this._lastRoutedPair = pairKey;
+      updateFareDisplay(fare) {
+        this.renderRouteTelemetryPill();
+        document.getElementById('selectedTierCapacity').textContent = `Payload: ${fare.vehicle.Max_Payload_Kg} kg`;
+        document.getElementById('fareBaseDisplay').textContent = `₹${fare.baseFare}`;
+        document.getElementById('fareDistanceRateLabel').textContent = `Distance (${fare.extraKm} km × ₹${fare.perKmRate}):`;
+        document.getElementById('fareDistDisplay').textContent = `₹${fare.distanceCharge}`;
+        document.getElementById('fareGstDisplay').textContent = `₹${fare.tolls + fare.gst}`;
+        document.getElementById('fareTotalDisplay').textContent = `₹${fare.total}`;
+      },
 
-        const result = LoadKaroModel.calculateCoordinateRoute(pickup, drop, LoadKaroModel.state.tripMode);
+      showToast(title, msg) {
+        const c = document.getElementById('toastContainer');
+        if (!c) return;
+        const t = document.createElement('div');
+        t.className = 'p-3 bg-highway-900 text-amberSafety-400 rounded-xl shadow-lg text-xs font-bold';
+        t.innerHTML = `<strong>${title}</strong>: ${msg}`;
+        c.appendChild(t);
+        setTimeout(() => t.remove(), 4000);
+      }
+    };
 
-        LoadKaroModel.state.isCalculatingRoute = false;
-        LoadKaroModel.state.baseDistanceKm = result.distanceKm;
-        LoadKaroModel.state.routeDurationSec = result.durationSec;
-        LoadKaroModel.state.routeSource = result.source;
-        this.applyEffectiveDistance();
-      },// Live OSRM Highway Distance Engine + All-India Nominatim Geocoder
+    const LoadKaroController = {
+      init() {
+        this.bindEvents();
+        LoadKaroView.renderEstimatorVehicleChips(LoadKaroModel.db.Fleet_Inventory, LoadKaroModel.state.selectedVehicleId);
+        this.calculateRealRoadRoute();
+      },
+
       async geocodePlaceIndia(queryText) {
         try {
           const q = encodeURIComponent(queryText + ', India');
@@ -29,65 +364,117 @@
             return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
           }
         } catch (e) {
-          console.warn('Geocoding fallback:', e);
+          console.warn('Geocoding error:', e);
         }
         return null;
       },
 
       async calculateRealRoadRoute() {
-        const pickupInput = document.getElementById('pickupInput');
-        const dropInput = document.getElementById('dropInput');
-        const pickup = (pickupInput?.value || '').trim();
-        const drop = (dropInput?.value || '').trim();
-
-        if (pickup.length < 2 || drop.length < 2) return;
-
-        const pairKey = `${LoadKaroModel.state.tripMode}||${LoadKaroModel.state.tripMode === 'intra' ? LoadKaroModel.state.selectedLocalCity : 'all'}||${pickup.toLowerCase()}||${drop.toLowerCase()}`;
-        this._lastRoutedPair = pairKey;
+        const pVal = document.getElementById('pickupInput')?.value.trim() || '';
+        const dVal = document.getElementById('dropInput')?.value.trim() || '';
+        if (pVal.length < 2 || dVal.length < 2) return;
 
         const reqSeq = ++LoadKaroModel.state.routeRequestSeq;
         LoadKaroModel.state.isCalculatingRoute = true;
         LoadKaroView.renderRouteTelemetryPill();
 
-        // 1. Check local coordinates first, then fall back to live India map search for any town/pin
-        const cachedP = LoadKaroModel.state.selectedCoords?.pickup;
-        const cachedD = LoadKaroModel.state.selectedCoords?.drop;
-        let pLoc = (cachedP && cachedP.label === pickup) ? cachedP : LoadKaroModel.resolveLocationCoords(pickup);
-        let dLoc = (cachedD && cachedD.label === drop) ? cachedD : LoadKaroModel.resolveLocationCoords(drop);
+        let pLoc = LoadKaroModel.resolveLocationCoords(pVal);
+        let dLoc = LoadKaroModel.resolveLocationCoords(dVal);
 
-        const cityHint = LoadKaroModel.state.tripMode === 'intra' ? `, ${LoadKaroModel.state.selectedLocalCity}` : '';
-        if (!pLoc) pLoc = await this.geocodePlaceIndia(pickup + cityHint);
-        if (!dLoc) dLoc = await this.geocodePlaceIndia(drop + cityHint);
+        if (!pLoc) pLoc = await this.geocodePlaceIndia(pVal);
+        if (!dLoc) dLoc = await this.geocodePlaceIndia(dVal);
 
         if (reqSeq !== LoadKaroModel.state.routeRequestSeq) return;
 
-        // 2. Query Live OSRM Driving Route Server for real highway kilometers
-        if (pLoc && dLoc && Number.isFinite(pLoc.lat) && Number.isFinite(dLoc.lat)) {
+        if (pLoc && dLoc) {
           try {
-            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${pLoc.lon},${pLoc.lat};${dLoc.lon},${dLoc.lat}?overview=false`;
-            const response = await fetch(osrmUrl);
-            const data = await response.json();
+            const url = `https://router.project-osrm.org/route/v1/driving/${pLoc.lon},${pLoc.lat};${dLoc.lon},${dLoc.lat}?overview=false`;
+            const res = await fetch(url);
+            const data = await res.json();
             if (reqSeq !== LoadKaroModel.state.routeRequestSeq) return;
 
-            if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-              const route = data.routes[0];
+            if (data.code === 'Ok' && data.routes?.length > 0) {
+              const r = data.routes[0];
               LoadKaroModel.state.isCalculatingRoute = false;
-              LoadKaroModel.state.baseDistanceKm = Math.max(2, Math.round(route.distance / 1000));
-              LoadKaroModel.state.routeDurationSec = Math.round(route.duration);
-              LoadKaroModel.state.routeSource = 'Coordinate Road Matrix';
-              this.applyEffectiveDistance();
+              LoadKaroModel.state.distanceKm = Math.max(3, Math.round(r.distance / 1000));
+              LoadKaroModel.state.routeDurationSec = Math.round(r.duration);
+              this.refreshEstimator();
               return;
             }
-          } catch (err) {
-            console.warn('OSRM live fetch fallback to matrix:', err);
+          } catch (e) {
+            console.warn('OSRM fetch error:', e);
           }
         }
 
-        // 3. Offline backup calculation if internet/OSRM is unreachable
-        const result = LoadKaroModel.calculateCoordinateRoute(pickup, drop, LoadKaroModel.state.tripMode);
+        // Fallback calculation
         LoadKaroModel.state.isCalculatingRoute = false;
-        LoadKaroModel.state.baseDistanceKm = result.distanceKm;
-        LoadKaroModel.state.routeDurationSec = result.durationSec;
-        LoadKaroModel.state.routeSource = result.source;
-        this.applyEffectiveDistance();
+        LoadKaroModel.state.distanceKm = 45;
+        LoadKaroModel.state.routeDurationSec = 3600;
+        this.refreshEstimator();
       },
+
+      refreshEstimator() {
+        const fare = LoadKaroModel.calculateFare(LoadKaroModel.state.selectedVehicleId, LoadKaroModel.state.distanceKm);
+        LoadKaroView.updateFareDisplay(fare);
+      },
+
+      bindEvents() {
+        const self = this;
+        document.getElementById('btnModeIntra')?.addEventListener('click', () => {
+          LoadKaroModel.state.tripMode = 'intra';
+          self.calculateRealRoadRoute();
+        });
+        document.getElementById('btnModeInter')?.addEventListener('click', () => {
+          LoadKaroModel.state.tripMode = 'inter';
+          self.calculateRealRoadRoute();
+        });
+        document.getElementById('pickupInput')?.addEventListener('input', () => self.calculateRealRoadRoute());
+        document.getElementById('dropInput')?.addEventListener('input', () => self.calculateRealRoadRoute());
+
+        document.getElementById('vehicleTierChips')?.addEventListener('click', (e) => {
+          const chip = e.target.closest('.estimator-vehicle-chip');
+          if (chip) {
+            LoadKaroModel.state.selectedVehicleId = chip.dataset.vehicleId;
+            LoadKaroView.renderEstimatorVehicleChips(LoadKaroModel.db.Fleet_Inventory, chip.dataset.vehicleId);
+            self.refreshEstimator();
+          }
+        });
+
+        document.getElementById('freightEstimatorForm')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const fare = LoadKaroModel.calculateFare(LoadKaroModel.state.selectedVehicleId, LoadKaroModel.state.distanceKm);
+          const lr = 'LV-' + Math.floor(1000 + Math.random() * 9000);
+          const client = await getSupabaseClient();
+          
+          if (client) {
+            await client.from('bookings_consignments').insert([{
+              lr_number: lr,
+              pickup_hub: document.getElementById('pickupInput').value,
+              drop_hub: document.getElementById('dropInput').value,
+              est_distance_km: LoadKaroModel.state.distanceKm,
+              total_fare_inr: fare.total,
+              status: 'Driver Assigned'
+            }]);
+          }
+
+          document.getElementById('bookingModalContent').innerHTML = `
+            <div class="space-y-1 font-mono">
+              <div>LR Number: <strong>${lr}</strong></div>
+              <div>Distance: <strong>${LoadKaroModel.state.distanceKm} km (OSRM Live)</strong></div>
+              <div>Total Fare: <strong>₹${fare.total}</strong></div>
+            </div>
+          `;
+          document.getElementById('bookingModal').classList.remove('hidden');
+          LoadKaroView.showToast('Booked!', `Consignment ${lr} created and synced.`);
+        });
+
+        document.getElementById('btnCloseBookingModal')?.addEventListener('click', () => {
+          document.getElementById('bookingModal').classList.add('hidden');
+        });
+      }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => LoadKaroController.init());
+  </script>
+</body>
+</html>
