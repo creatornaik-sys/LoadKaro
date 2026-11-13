@@ -1,0 +1,6 @@
+{
+  "name": "LoadKaro - On-Demand Commercial Freight & Heavy Trucks",
+  "description": "India's premier on-demand commercial tempos and heavy trucks logistics platform with 60-second booking, live telematics radar, and Excel database sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
