@@ -210,37 +210,88 @@
   <section id="telematicsSection" class="py-16 bg-white border-y border-slate-200">
     <div class="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
       <h2 class="text-2xl sm:text-3xl font-extrabold text-highway-900 tracking-tight font-sans mb-4">LIVE CONSIGNMENT RADAR (LR LOOKUP)</h2>
-      <div class="flex gap-2 mb-6">
+      <div class="flex gap-2 mb-4">
         <input type="text" id="lrSearchInput" placeholder="Search active LR number..." class="w-full max-w-md px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs" />
         <button type="button" id="btnTrackLr" class="px-5 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl">Track LR</button>
       </div>
+      <div id="quickLrChipsContainer" class="flex flex-wrap items-center gap-2 mb-6"></div>
       <div id="activeConsignmentCard" class="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-sm"></div>
     </div>
   </section>
 
-  <!-- AI FLEET DISPATCHER & DISPUTE DESK -->
+  <!-- AI FLEET DISPATCHER & DISPUTE RESOLUTION DESK -->
   <section id="disputeSection" class="py-16 bg-[#F8FAFC]">
     <div class="max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8">
       <h2 class="text-3xl font-extrabold text-highway-900 tracking-tight font-sans mb-6">AI FLEET DISPATCHER & DISPUTE RESOLUTION DESK</h2>
-      <div class="bg-white rounded-2xl p-6 border border-slate-200 max-w-xl">
-        <h3 class="text-lg font-bold text-highway-900 mb-2">File Instant Consignment Claim</h3>
-        <form id="customClaimForm" class="space-y-3 text-xs">
+      
+      <!-- 3 Policy Action Cards -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+        <div class="interactive-card bg-white rounded-2xl p-6 border border-slate-200 flex flex-col justify-between">
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Select Consignment LR</label>
-            <select id="claimLrSelect" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium">
-              <option value="" disabled selected>No active consignments yet — book a truck first</option>
-            </select>
+            <span class="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-50 text-amber-700">POL-DET-01</span>
+            <h3 class="text-base font-bold text-highway-900 font-sans mt-2 mb-1">Traffic Bottleneck Detention Waiver</h3>
+            <p class="text-xs text-slate-600 mb-4">Evaluates GPS telematics speed logs and waives detention surcharges up to ₹1,500 automatically.</p>
           </div>
+          <div id="quickActionSlotDetention">
+            <button id="btnResolveDelayPolicy" class="w-full py-2.5 bg-amberSafety-500 hover:bg-amberSafety-600 text-slate-950 font-bold text-xs rounded-xl">Run Detention Waiver (POL-DET-01)</button>
+          </div>
+        </div>
+
+        <div class="interactive-card bg-white rounded-2xl p-6 border border-slate-200 flex flex-col justify-between">
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Dispute Classification</label>
-            <select id="claimPolicySelect" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium">
-              <option value="POL-DET-01">POL-DET-01: Traffic Congestion Detention Waiver</option>
-              <option value="POL-DMG-02">POL-DMG-02: Certified Pallet Impact & Structural Damage</option>
-              <option value="POL-CAN-03">POL-CAN-03: Cancellation within Grace Window</option>
-            </select>
+            <span class="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-50 text-emerald-700">POL-DMG-02</span>
+            <h3 class="text-base font-bold text-highway-900 font-sans mt-2 mb-1">Cargo Protection Insurance Settlement</h3>
+            <p class="text-xs text-slate-600 mb-4">Validates verified POD discrepancy for instant transit insurance settlement up to ₹15,000.</p>
           </div>
-          <button type="submit" class="w-full py-2.5 bg-highway-900 text-amberSafety-400 font-bold rounded-lg">Run Policy Evaluation</button>
-        </form>
+          <div id="quickActionSlotDamage">
+            <button id="btnSettleDamagePolicy" class="w-full py-2.5 bg-highway-900 text-amberSafety-400 font-bold text-xs rounded-xl">Run Cargo Settlement (POL-DMG-02)</button>
+          </div>
+        </div>
+
+        <div class="interactive-card bg-white rounded-2xl p-6 border border-slate-200 flex flex-col justify-between">
+          <div>
+            <span class="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-blue-50 text-blue-700">POL-CAN-03</span>
+            <h3 class="text-base font-bold text-highway-900 font-sans mt-2 mb-1">Grace Window Cancellation & Refund</h3>
+            <p class="text-xs text-slate-600 mb-4">Checks booking timestamp (&lt;15 mins grace window) to approve a 100% penalty-free refund.</p>
+          </div>
+          <div id="quickActionSlotCancel">
+            <button id="btnCancelRefundPolicy" class="w-full py-2.5 bg-slate-100 text-slate-900 border border-slate-300 font-bold text-xs rounded-xl">Check Grace Refund (POL-CAN-03)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom Claim Filing & Ledger -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 bg-white rounded-2xl p-6 border border-slate-200">
+          <h3 class="text-lg font-bold text-highway-900 mb-2">File Instant Consignment Claim</h3>
+          <form id="customClaimForm" class="space-y-3 text-xs">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Select Consignment LR</label>
+              <select id="claimLrSelect" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium">
+                <option value="" disabled selected>No active consignments yet — book a truck first</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Dispute Classification</label>
+              <select id="claimPolicySelect" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium">
+                <option value="POL-DET-01">POL-DET-01: Traffic Congestion Detention Waiver</option>
+                <option value="POL-DMG-02">POL-DMG-02: Certified Pallet Impact & Structural Damage</option>
+                <option value="POL-CAN-03">POL-CAN-03: Cancellation within Grace Window</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Dispute Narrative</label>
+              <textarea id="claimDescription" rows="2" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-lg" placeholder="Enter details..."></textarea>
+            </div>
+            <button type="submit" class="w-full py-2.5 bg-highway-900 text-amberSafety-400 font-bold rounded-lg">Run Policy Evaluation</button>
+          </form>
+          <div id="claimVerdictContainer" class="hidden mt-4"></div>
+        </div>
+
+        <div class="lg:col-span-7 bg-white rounded-2xl p-6 border border-slate-200">
+          <h3 class="text-lg font-bold text-highway-900 mb-2">Active Disputes & Settlements</h3>
+          <div id="claimsList" class="space-y-2.5 overflow-y-auto max-h-72"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -256,7 +307,7 @@
 
   <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- JAVASCRIPT APP LOGIC WITH LIVE OSRM ROAD ROUTING -->
+  <!-- APP JAVASCRIPT WITH LIVE OSRM & SUPABASE SYNC -->
   <script type="module">
     const SUPABASE_URL = import.meta?.env?.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
     const SUPABASE_ANON_KEY = import.meta?.env?.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
@@ -284,6 +335,7 @@
           { Vehicle_ID: 'V08', Model_Name: 'BharatBenz 1617R', Category: 'Heavy HCV', Max_Payload_Kg: 10000, Cargo_Volume_CuFt: 1200, Base_Fare_INR: 3800, Included_Km: 20, Per_Km_Rate_INR: 85, Free_Loading_Mins: 180, Available_Now: 3, Image_URL: './assets/vehicles/v08.png', Best_For: 'Heavy engineering, machinery' }
         ],
         Bookings_Consignments: [],
+        Disputes_Claims: [],
         Drivers_Fleet_Partners: [
           { Driver_ID: 'DRV-01', Name: 'Manjunath Gowda', Mobile: '+91 98451 22910', Rating: 4.9, Vehicle_Assigned: 'Tata Ace Gold', Current_Status: 'Available' }
         ]
@@ -297,8 +349,7 @@
         routeDurationSec: 5400,
         routeSource: 'Live OSRM Road Routing',
         isCalculatingRoute: false,
-        routeRequestSeq: 0,
-        fleetFilter: 'all'
+        routeRequestSeq: 0
       },
 
       LOADKARO_LOCATIONS: {
@@ -428,6 +479,20 @@
         `;
       },
 
+      renderQuickLrChips(bookings, activeLr) {
+        const container = document.getElementById('quickLrChipsContainer');
+        if (!container) return;
+        if (!bookings || bookings.length === 0) {
+          container.innerHTML = `<span class="text-xs text-slate-400">0 Active Consignments</span>`;
+          return;
+        }
+        container.innerHTML = bookings.map(b => `
+          <button type="button" class="lr-chip-btn px-3 py-1 font-mono text-xs rounded-lg border ${b.lr_number === activeLr ? 'bg-amber-400 font-bold' : 'bg-white'}" data-lr="${b.lr_number}">
+            ${b.lr_number}
+          </button>
+        `).join('');
+      },
+
       renderClaimLrSelect(bookings) {
         const select = document.getElementById('claimLrSelect');
         if (!select) return;
@@ -436,6 +501,33 @@
           return;
         }
         select.innerHTML = bookings.map(b => `<option value="${b.lr_number}">${b.lr_number} (${b.pickup_hub} ➔ ${b.drop_hub})</option>`).join('');
+      },
+
+      renderClaimsList(claims) {
+        const container = document.getElementById('claimsList');
+        if (!container) return;
+        if (!claims || claims.length === 0) {
+          container.innerHTML = `<div class="text-xs text-slate-400">No disputes filed yet.</div>`;
+          return;
+        }
+        container.innerHTML = claims.map(c => `
+          <div class="p-3 bg-slate-50 border rounded-xl text-xs">
+            <div class="font-mono font-bold">${c.claim_id} • ${c.lr_number} (${c.policy_ref})</div>
+            <div class="text-slate-600">${c.description}</div>
+            <div class="text-[11px] text-emerald-700 font-mono mt-1">● ${c.settlement_status} (Token: ${c.resolution_token})</div>
+          </div>
+        `).join('');
+      },
+
+      renderQuickActionSettled(slotId, token, policyCode) {
+        const slot = document.getElementById(slotId);
+        if (!slot) return;
+        slot.innerHTML = `
+          <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3 text-xs">
+            <div class="font-bold mb-1">✓ Policy Settled & Logged (${policyCode})</div>
+            <div class="font-mono text-[11px]">Token: <strong>${token}</strong></div>
+          </div>
+        `;
       },
 
       showToast(title, msg) {
@@ -461,11 +553,19 @@
       async syncFromSupabase() {
         const client = await getSupabaseClient();
         if (!client) return;
-        const { data } = await client.from('bookings_consignments').select('*').order('created_at', { ascending: false });
-        if (data && data.length > 0) {
-          LoadKaroModel.db.Bookings_Consignments = data;
-          LoadKaroView.renderConsignmentRadar(data[0]);
-          LoadKaroView.renderClaimLrSelect(data);
+        const [bRes, dRes] = await Promise.all([
+          client.from('bookings_consignments').select('*').order('created_at', { ascending: false }),
+          client.from('disputes_claims').select('*').order('created_at', { ascending: false })
+        ]);
+        if (bRes.data) {
+          LoadKaroModel.db.Bookings_Consignments = bRes.data;
+          LoadKaroView.renderConsignmentRadar(bRes.data[0]);
+          LoadKaroView.renderQuickLrChips(bRes.data, LoadKaroModel.state.activeLr);
+          LoadKaroView.renderClaimLrSelect(bRes.data);
+        }
+        if (dRes.data) {
+          LoadKaroModel.db.Disputes_Claims = dRes.data;
+          LoadKaroView.renderClaimsList(dRes.data);
         }
       },
 
@@ -555,6 +655,85 @@
           }
         });
 
+        document.getElementById('btnTrackLr')?.addEventListener('click', () => {
+          const q = document.getElementById('lrSearchInput').value.trim().toUpperCase();
+          const found = LoadKaroModel.db.Bookings_Consignments.find(b => b.lr_number.toUpperCase() === q);
+          if (found) {
+            LoadKaroModel.state.activeLr = found.lr_number;
+            LoadKaroView.renderConsignmentRadar(found);
+            LoadKaroView.renderQuickLrChips(LoadKaroModel.db.Bookings_Consignments, found.lr_number);
+            LoadKaroView.showToast('Tracked', `Centered radar on ${found.lr_number}`);
+          } else {
+            LoadKaroView.showToast('Not Found', 'LR number not found in active consignments', 'warning');
+          }
+        });
+
+        document.getElementById('quickLrChipsContainer')?.addEventListener('click', (e) => {
+          const btn = e.target.closest('.lr-chip-btn');
+          if (btn?.dataset.lr) {
+            const found = LoadKaroModel.db.Bookings_Consignments.find(b => b.lr_number === btn.dataset.lr);
+            if (found) {
+              LoadKaroModel.state.activeLr = found.lr_number;
+              LoadKaroView.renderConsignmentRadar(found);
+              LoadKaroView.renderQuickLrChips(LoadKaroModel.db.Bookings_Consignments, found.lr_number);
+            }
+          }
+        });
+
+        // 3 Policy Action Handlers
+        document.getElementById('btnResolveDelayPolicy')?.addEventListener('click', async () => {
+          const active = LoadKaroModel.db.Bookings_Consignments[0];
+          if (!active) return LoadKaroView.showToast('No Booking', 'Create a booking first', 'warning');
+          const token = `WAIVER-${active.lr_number}-AUTO`;
+          const claim = { claim_id: `CLM-${Math.floor(100+Math.random()*900)}`, lr_number: active.lr_number, policy_ref: 'POL-DET-01', description: 'Traffic congestion delay detention waived 100%.', claimed_amount_inr: 350, settled_amount_inr: 350, settlement_status: 'Approved', resolution_token: token };
+          const client = await getSupabaseClient();
+          if (client) await client.from('disputes_claims').insert([claim]);
+          LoadKaroModel.db.Disputes_Claims.unshift(claim);
+          LoadKaroView.renderClaimsList(LoadKaroModel.db.Disputes_Claims);
+          LoadKaroView.renderQuickActionSettled('quickActionSlotDetention', token, 'POL-DET-01');
+          LoadKaroView.showToast('Settled', 'Detention waiver logged.');
+        });
+
+        document.getElementById('btnSettleDamagePolicy')?.addEventListener('click', async () => {
+          const active = LoadKaroModel.db.Bookings_Consignments[0];
+          if (!active) return LoadKaroView.showToast('No Booking', 'Create a booking first', 'warning');
+          const token = `SETTLE-${active.lr_number}-AUTO`;
+          const claim = { claim_id: `CLM-${Math.floor(100+Math.random()*900)}`, lr_number: active.lr_number, policy_ref: 'POL-DMG-02', description: 'Certified pallet impact insurance settlement approved.', claimed_amount_inr: 4500, settled_amount_inr: 4500, settlement_status: 'Approved', resolution_token: token };
+          const client = await getSupabaseClient();
+          if (client) await client.from('disputes_claims').insert([claim]);
+          LoadKaroModel.db.Disputes_Claims.unshift(claim);
+          LoadKaroView.renderClaimsList(LoadKaroModel.db.Disputes_Claims);
+          LoadKaroView.renderQuickActionSettled('quickActionSlotDamage', token, 'POL-DMG-02');
+          LoadKaroView.showToast('Settled', 'Cargo claim settled.');
+        });
+
+        document.getElementById('btnCancelRefundPolicy')?.addEventListener('click', async () => {
+          const active = LoadKaroModel.db.Bookings_Consignments[0];
+          if (!active) return LoadKaroView.showToast('No Booking', 'Create a booking first', 'warning');
+          const token = `REFUND-${active.lr_number}-AUTO`;
+          const claim = { claim_id: `CLM-${Math.floor(100+Math.random()*900)}`, lr_number: active.lr_number, policy_ref: 'POL-CAN-03', description: 'Grace period cancellation (<15m) 100% refund approved.', claimed_amount_inr: active.total_fare_inr, settled_amount_inr: active.total_fare_inr, settlement_status: 'Refund Approved', resolution_token: token };
+          const client = await getSupabaseClient();
+          if (client) await client.from('disputes_claims').insert([claim]);
+          LoadKaroModel.db.Disputes_Claims.unshift(claim);
+          LoadKaroView.renderClaimsList(LoadKaroModel.db.Disputes_Claims);
+          LoadKaroView.renderQuickActionSettled('quickActionSlotCancel', token, 'POL-CAN-03');
+          LoadKaroView.showToast('Settled', '100% refund approved.');
+        });
+
+        document.getElementById('customClaimForm')?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const lrNumber = document.getElementById('claimLrSelect').value;
+          const policyRef = document.getElementById('claimPolicySelect').value;
+          const description = document.getElementById('claimDescription').value || 'Custom policy evaluation';
+          const token = `AUTO-${lrNumber}-${Math.floor(1000 + Math.random() * 9000)}`;
+          const claim = { claim_id: `CLM-${Math.floor(100+Math.random()*900)}`, lr_number: lrNumber, policy_ref: policyRef, description, claimed_amount_inr: 1000, settled_amount_inr: 1000, settlement_status: 'Auto-Settled', resolution_token: token };
+          const client = await getSupabaseClient();
+          if (client) await client.from('disputes_claims').insert([claim]);
+          LoadKaroModel.db.Disputes_Claims.unshift(claim);
+          LoadKaroView.renderClaimsList(LoadKaroModel.db.Disputes_Claims);
+          LoadKaroView.showToast('Claim Filed', `Claim ${claim.claim_id} auto-settled.`);
+        });
+
         document.getElementById('freightEstimatorForm')?.addEventListener('submit', async (e) => {
           e.preventDefault();
           const fare = LoadKaroModel.calculateFare(LoadKaroModel.state.selectedVehicleId, LoadKaroModel.state.distanceKm);
@@ -575,7 +754,9 @@
           }
 
           LoadKaroModel.db.Bookings_Consignments.unshift(newBooking);
+          LoadKaroModel.state.activeLr = lr;
           LoadKaroView.renderConsignmentRadar(newBooking);
+          LoadKaroView.renderQuickLrChips(LoadKaroModel.db.Bookings_Consignments, lr);
           LoadKaroView.renderClaimLrSelect(LoadKaroModel.db.Bookings_Consignments);
 
           document.getElementById('bookingModalContent').innerHTML = `
