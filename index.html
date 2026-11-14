@@ -3006,29 +3006,74 @@
         LoadKaroModel.state.distanceKm = effectiveKm;
         this.refreshEstimatorUI();
       },
+async geocodePlaceIndia(queryText) {
+        try {
+          const q = encodeURIComponent(queryText + ', India');
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}&countrycodes=in&limit=1`);
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+          }
+        } catch (e) {
+          console.warn('Geocoding fallback:', e);
+        }
+        return null;
+      },
 
-      // Offline Coordinate-Based Road Distance Engine (Haversine x 1.32 Winding Factor)
-      calculateRealRoadRoute() {
+      async calculateRealRoadRoute() {
         const pickupInput = document.getElementById('pickupInput');
         const dropInput = document.getElementById('dropInput');
         const pickup = (pickupInput?.value || '').trim();
         const drop = (dropInput?.value || '').trim();
 
-        if (pickup.length < 1 || drop.length < 1) {
-          return;
-        }
+        if (pickup.length < 2 || drop.length < 2) return;
 
         const pairKey = `${LoadKaroModel.state.tripMode}||${LoadKaroModel.state.tripMode === 'intra' ? LoadKaroModel.state.selectedLocalCity : 'all'}||${pickup.toLowerCase()}||${drop.toLowerCase()}`;
         this._lastRoutedPair = pairKey;
 
-        const result = LoadKaroModel.calculateCoordinateRoute(pickup, drop, LoadKaroModel.state.tripMode);
+        const reqSeq = ++LoadKaroModel.state.routeRequestSeq;
+        LoadKaroModel.state.isCalculatingRoute = true;
+        LoadKaroView.renderRouteTelemetryPill();
 
+        const cachedP = LoadKaroModel.state.selectedCoords?.pickup;
+        const cachedD = LoadKaroModel.state.selectedCoords?.drop;
+        let pLoc = (cachedP && cachedP.label === pickup) ? cachedP : LoadKaroModel.resolveLocationCoords(pickup);
+        let dLoc = (cachedD && cachedD.label === drop) ? cachedD : LoadKaroModel.resolveLocationCoords(drop);
+
+        const cityHint = LoadKaroModel.state.tripMode === 'intra' ? `, ${LoadKaroModel.state.selectedLocalCity}` : '';
+        if (!pLoc) pLoc = await this.geocodePlaceIndia(pickup + cityHint);
+        if (!dLoc) dLoc = await this.geocodePlaceIndia(drop + cityHint);
+
+        if (reqSeq !== LoadKaroModel.state.routeRequestSeq) return;
+
+        if (pLoc && dLoc && Number.isFinite(pLoc.lat) && Number.isFinite(dLoc.lat)) {
+          try {
+            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${pLoc.lon},${pLoc.lat};${dLoc.lon},${dLoc.lat}?overview=false`;
+            const response = await fetch(osrmUrl);
+            const data = await response.json();
+            if (reqSeq !== LoadKaroModel.state.routeRequestSeq) return;
+
+            if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+              const route = data.routes[0];
+              LoadKaroModel.state.isCalculatingRoute = false;
+              LoadKaroModel.state.baseDistanceKm = Math.max(2, Math.round(route.distance / 1000));
+              LoadKaroModel.state.routeDurationSec = Math.round(route.duration);
+              LoadKaroModel.state.routeSource = 'Coordinate Road Matrix';
+              this.applyEffectiveDistance();
+              return;
+            }
+          } catch (err) {
+            console.warn('OSRM live fetch fallback to matrix:', err);
+          }
+        }
+
+        const result = LoadKaroModel.calculateCoordinateRoute(pickup, drop, LoadKaroModel.state.tripMode);
         LoadKaroModel.state.isCalculatingRoute = false;
         LoadKaroModel.state.baseDistanceKm = result.distanceKm;
         LoadKaroModel.state.routeDurationSec = result.durationSec;
         LoadKaroModel.state.routeSource = result.source;
         this.applyEffectiveDistance();
-      },
+      },      },
 
       // Instant City-Scoped Predictive Location Autocomplete State & Methods
       _acState: {
